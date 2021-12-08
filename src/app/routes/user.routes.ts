@@ -7,24 +7,14 @@ const router = Router();
 router.route("/authorize")
 .post(UserController.authorize);
 
-router.route("/recipe")
+router.route("/")
 .get(authUser, UserController.getRecipesByID)
 .post(authUser, UserController.postRecipeByID)
 .delete(authUser, UserController.deleteRecipesByID);
 
-router.route("/recipe/:id")
+router.route("/user/:id")
 .get(authUser, UserController.getRecipeByID)
 .put(authUser, UserController.putRecipeByID)
 .delete(authUser, UserController.deleteRecipeByID);
-
-router.route("/saves")
-.get(authUser, UserController.getSavesByID)
-.post(authUser, UserController.postSaveByID)
-.delete(authUser, UserController.deleteSavesByID);
-
-router.route("/saves/:id")
-.get(authUser, UserController.getSaveByID)
-.put(authUser, UserController.putSaveByID)
-.delete(authUser, UserController.deleteSaveByID);
 
 export default router;
