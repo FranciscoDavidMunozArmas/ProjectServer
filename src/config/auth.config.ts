@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from "express";
+import { doc, getDoc, query } from "firebase/firestore";
 import { decode } from "../lib/token";
+import { database } from './firestore.config';
 
 const veriftyToken = (auth: any) => {
   if (!auth) {
@@ -15,11 +17,11 @@ const veriftyToken = (auth: any) => {
   }
   return payload;
 };
-/*
+
 const verifyExistance = async (payload: any) => {
   try {
-    const result = await userSchema.findById(payload._id);
-    if (result) {
+    const docResult = await getDoc(doc(database, 'users', payload));
+    if (docResult.data()) {
       return true;
     }
   } catch (error: any) {
@@ -27,24 +29,22 @@ const verifyExistance = async (payload: any) => {
   }
   return null;
 
-}*/
+}
 
 export const authUser = (req: Request | any, res: Response, next: NextFunction) => {
   const payload = veriftyToken(req.headers.authorization);
   if (!payload) {
     return res.status(401).json({ status: false, authorization: "Denied" });
   }
-  req.payload = payload;
-  next();
-  /*verifyExistance(payload)
+  verifyExistance(payload)
     .then((result) => {
       if (result) {
-        req.body.payload = payload;
+        req.payload = payload;
         next();
       } else {
         return res.status(401).json({ status: false, authorization: "Denied" });
       }
     }).catch(() => {
       return res.status(401).json({ status: false, authorization: "Denied" });
-    });*/
+    });
 };

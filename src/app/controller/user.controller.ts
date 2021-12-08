@@ -16,7 +16,9 @@ const documentRef = (docId: string) => {
 export const authorize = async (req: Request, res: Response) => {
     try {
         const { user } = req.body;
-        return res.status(200).json({ token: tokenize(user) });
+        const docQuery = query(collectionRef(), where('log', '==', user));
+        const querySnapshot = await getDocs(docQuery);
+        return res.status(200).json({ token: tokenize(querySnapshot.docs[0].id) });
     } catch (error: any) {
         return res.status(500).json({
             message: "Error",
@@ -116,15 +118,13 @@ export const putSave = async (req: Request | any, res: Response) => {
     try {
         const { payload } = req;
         const { recipe } = req.body;
-        const docQuery = query(collectionRef(), where('log', '==', payload));
-        const querySnapshot = await getDocs(docQuery);
-        const oldData: User | any = (querySnapshot.docs[0]).data();
+        const oldData: User | any = (await getDoc(documentRef(payload))).data();
         if (oldData.saves) {
             oldData.saves.push(recipe);
         } else {
             oldData.saves = [recipe];
         }
-        await updateDoc(querySnapshot.docs[0].ref, oldData);
+        await updateDoc(documentRef(payload), oldData);
         return res.status(200).json({
             message: "Saved recipe",
             item: recipe
@@ -141,13 +141,11 @@ export const deleteSave = async (req: Request | any, res: Response) => {
     try {
         const { payload } = req;
         const { recipe } = req.body;
-        const docQuery = query(collectionRef(), where('log', '==', payload));
-        const querySnapshot = await getDocs(docQuery);
-        const oldData: User | any = (querySnapshot.docs[0]).data();
+        const oldData: User | any = (await getDoc(documentRef(payload))).data();
         if (oldData.saves) {
             oldData.saves = oldData.saves.filter((item: string) => item !== recipe);
         }
-        await updateDoc(querySnapshot.docs[0].ref, oldData);
+        await updateDoc(documentRef(payload), oldData);
         return res.status(200).json({
             message: "Saved recipe deleted",
             item: recipe
