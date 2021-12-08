@@ -16,10 +16,8 @@ router.route("/user/:id")
 .get(authUser, UserController.getUserByID)
 .delete(authUser, UserController.deleteUserByID);
 
-router.route("/recipe/")
-.post(authUser, UserController.postRecipe);
-
-router.route("/save/")
-.post(authUser, UserController.postSave);
+router.route("/saves/")
+.put(authUser, UserController.putSave)
+.delete(authUser, UserController.deleteSave);
 
 export default router;
