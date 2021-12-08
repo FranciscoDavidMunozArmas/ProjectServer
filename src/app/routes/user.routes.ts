@@ -8,13 +8,18 @@ router.route("/authorize")
 .post(UserController.authorize);
 
 router.route("/")
-.get(authUser, UserController.getRecipesByID)
-.post(authUser, UserController.postRecipeByID)
-.delete(authUser, UserController.deleteRecipesByID);
+.get(authUser, UserController.getUsers)
+.post(authUser, UserController.postUser)
+.delete(authUser, UserController.deleteUsers);
 
 router.route("/user/:id")
-.get(authUser, UserController.getRecipeByID)
-.put(authUser, UserController.putRecipeByID)
-.delete(authUser, UserController.deleteRecipeByID);
+.get(authUser, UserController.getUserByID)
+.delete(authUser, UserController.deleteUserByID);
+
+router.route("/recipe/")
+.post(authUser, UserController.postRecipe);
+
+router.route("/save/")
+.post(authUser, UserController.postSave);
 
 export default router;

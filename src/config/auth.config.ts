@@ -29,11 +29,12 @@ const verifyExistance = async (payload: any) => {
 
 }*/
 
-export const authUser = (req: Request, res: Response, next: NextFunction) => {
+export const authUser = (req: Request | any, res: Response, next: NextFunction) => {
   const payload = veriftyToken(req.headers.authorization);
   if (!payload) {
     return res.status(401).json({ status: false, authorization: "Denied" });
   }
+  req.payload = payload;
   next();
   /*verifyExistance(payload)
     .then((result) => {
