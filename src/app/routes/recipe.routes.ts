@@ -1,17 +1,18 @@
 import { Router } from 'express';
 import { authUser } from '../../config/auth.config';
+import { multerRecipe } from '../../config/multer.config';
 import * as RecipeController from '../controller/recipe.controller';
 
 const router = Router();
 
 router.route("/")
 .get(authUser, RecipeController.getRecipes)
-.post(authUser, RecipeController.postRecipe)
+.post(authUser, multerRecipe.single("recipeImage"), RecipeController.postRecipe)
 .delete(authUser, RecipeController.deleteRecipes);
 
 router.route("/recipe/:id")
 .get(authUser, RecipeController.getRecipeByID)
-.put(authUser, RecipeController.putRecipeByID)
+.put(authUser, multerRecipe.single("recipeImage"), RecipeController.putRecipeByID)
 .delete(authUser, RecipeController.deleteRecipeByID);
 
 
