@@ -162,9 +162,11 @@ export const putCommentary = async (req: Request | any, res: Response) => {
         if (recipe.commentaries) {
             const index = recipe.commentaries.findIndex(commentary => commentary.id === commentaryID);
             if (index !== -1) {
-                commentary.date = recipe.commentaries[index].date;
-                commentary.authorID = recipe.commentaries[index].authorID;
-                recipe.commentaries[index] = commentary;
+                if (recipe.commentaries[index].authorID === req.payload) {
+                    commentary.date = recipe.commentaries[index].date;
+                    commentary.authorID = recipe.commentaries[index].authorID;
+                    recipe.commentaries[index] = commentary;
+                }
             }
         }
         await updateDoc(documentRef(recipeID), recipeConverter.toJSON(recipe));
