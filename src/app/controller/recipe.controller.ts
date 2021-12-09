@@ -182,14 +182,17 @@ export const putCommentary = async (req: Request | any, res: Response) => {
     }
 }
 
-export const deleteCommentary = async (req: Request, res: Response) => {
+export const deleteCommentary = async (req: Request | any, res: Response) => {
     try {
         const { recipeID, commentaryID } = req.params;
         const recipeDoc = await getDoc(documentRef(recipeID));
         const recipe = recipeConverter.fromJSON(recipeDoc.data());
         if (recipe.commentaries) {
-            const newCommentaries = recipe.commentaries.filter(commentary => commentary.id !== commentaryID);
-            recipe.commentaries = newCommentaries;
+            const index = recipe.commentaries.findIndex(commentary => commentary.id === commentaryID);
+            if (recipe.commentaries[index].authorID === req.payload) {
+                const newCommentaries = recipe.commentaries.filter(commentary => commentary.id !== commentaryID);
+                recipe.commentaries = newCommentaries;
+            }
         }
         await updateDoc(documentRef(recipeID), recipeConverter.toJSON(recipe));
         return res.status(200).json({
