@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { database } from '../../config/firestore.config';
-import { addDoc, collection, deleteDoc, doc, FieldValue, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
-import { Recipe } from '../interfaces/recipe';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { recipeConverter } from '../interfaces/recipe';
 import { Score } from '../interfaces/score';
 
 const collectionRef = collection(database, 'recipes');
@@ -15,7 +15,8 @@ export const getRecipes = async (req: Request, res: Response) => {
         const querySnapshot = await getDocs(collectionRef);
         const recipeDocs: any[] = [];
         querySnapshot.forEach(doc => {
-            recipeDocs.push(doc.data());
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
         });
         return res.status(200).json({
             message: 'Recipes retrieved successfully',
@@ -31,8 +32,9 @@ export const getRecipes = async (req: Request, res: Response) => {
 
 export const postRecipe = async (req: Request | any, res: Response) => {
     try {
-        const recipe: Recipe = req.body;
+        const recipe = recipeConverter.fromJSON(req.body);
         recipe.author = req.payload;
+        recipe.date = new Date();
         const docRef = await addDoc(collectionRef, recipe);
         return res.status(200).json({
             message: "Recipe created",
@@ -70,10 +72,10 @@ export const getRecipeByID = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const recipeDoc = await getDoc(documentRef(id));
-        const recipe = recipeDoc.data();
+        const recipe = recipeConverter.fromJSON(recipeDoc.data());
         return res.status(200).json({
             message: "User found",
-            item: recipe
+            item: recipeConverter.toJSON(recipe)
         });
     } catch (error: any) {
         return res.status(500).json({
@@ -86,9 +88,12 @@ export const getRecipeByID = async (req: Request, res: Response) => {
 export const putRecipeByID = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const recipe: Recipe | any = req.body;
-        await updateDoc(documentRef(id), recipe);
-        return res.status(200).json({ message: "Post" });
+        const recipe = recipeConverter.fromJSON(req.body);
+        await updateDoc(documentRef(id), recipeConverter.toJSON(recipe));
+        return res.status(200).json({
+            message: "Recipe updated",
+            item: recipeConverter.toJSON(recipe)
+        });
     } catch (error: any) {
         return res.status(500).json({
             message: "Error",
@@ -120,13 +125,13 @@ export const postScoreByID = async (req: Request | any, res: Response) => {
         const score: Score = req.body;
         score.author = req.payload;
 
-        const oldData: Recipe | any = (await getDoc(recipeRef)).data();
-        if (oldData.score) {
-            oldData.score.push(score);
+        const oldData = recipeConverter.fromJSON((await getDoc(recipeRef)).data());
+        if (oldData.scores) {
+            oldData.scores.push(score);
         } else {
-            oldData.score = [score];
+            oldData.scores = [score];
         }
-        await updateDoc(recipeRef, oldData);
+        await updateDoc(recipeRef, recipeConverter.toJSON(oldData));
         return res.status(200).json({ message: "Recipe scored" });
     } catch (error: any) {
         return res.status(500).json({
@@ -140,13 +145,12 @@ export const deleteScoreByID = async (req: Request | any, res: Response) => {
     try {
         const { id } = req.params;
         const recipeRef = documentRef(id);
-        const score: Score = req.body;
 
-        const oldData: Recipe | any = (await getDoc(recipeRef)).data();
-        if (oldData.score) {
-            oldData.score = oldData.score.filter((item: Score) => item.author !== req.payload);
+        const oldData = recipeConverter.fromJSON((await getDoc(recipeRef)).data());
+        if (oldData.scores) {
+            oldData.scores = oldData.scores.filter((item: Score) => item.author !== req.payload);
         }
-        await updateDoc(recipeRef, oldData);
+        await updateDoc(recipeRef, recipeConverter.toJSON(oldData));
         return res.status(200).json({ message: "Recipe scored" });
     } catch (error: any) {
         return res.status(500).json({
@@ -161,13 +165,14 @@ export const getRecipesByCategory = async (req: Request, res: Response) => {
         const { category } = req.params;
         const queryDatabase = query(collectionRef, where('category', '==', category));
         const querySnapshot = await getDocs(queryDatabase);
-        const data: any[] = [];
+        const recipeDocs: any[] = [];
         querySnapshot.forEach(doc => {
-            data.push(doc.data());
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
         });
         return res.status(200).json({
             message: "Get by Category",
-            item: data
+            item: recipeDocs
         });
     } catch (error: any) {
         return res.status(500).json({
@@ -182,18 +187,14 @@ export const getRecipesByCategoryCount = async (req: Request, res: Response) => 
         const { category, count }: any = req.params;
         const queryDatabase = query(collectionRef, where('category', '==', category));
         const querySnapshot = await getDocs(queryDatabase);
-        const data: any[] = [];
-        let index = 0;
+        const recipeDocs: any[] = [];
         querySnapshot.forEach((doc) => {
-            if (index > count - 1) {
-                return;
-            }
-            data.push(doc.data());
-            index++;
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
         });
         return res.status(200).json({
             message: "Get by Category Count",
-            item: data
+            item: recipeDocs.slice(0, count)
         });
     } catch (error: any) {
         return res.status(500).json({
@@ -203,9 +204,21 @@ export const getRecipesByCategoryCount = async (req: Request, res: Response) => 
     }
 }
 
-export const getNewestRecipes = (req: Request, res: Response) => {
+export const getNewestRecipes = async (req: Request, res: Response) => {
     try {
-        return res.status(200).json({ message: "Get Newest" });
+        const querySnapshot = await getDocs(collectionRef);
+        let recipeDocs: any[] = [];
+        querySnapshot.forEach(doc => {
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
+        });
+        recipeDocs = recipeDocs.sort((a: any, b: any) => {
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+        return res.status(200).json({
+            message: "Newest recipes",
+            item: recipeDocs
+        });
     } catch (error: any) {
         return res.status(500).json({
             message: "Error",
@@ -214,9 +227,22 @@ export const getNewestRecipes = (req: Request, res: Response) => {
     }
 }
 
-export const getNewestRecipesCount = (req: Request, res: Response) => {
+export const getNewestRecipesCount = async (req: Request, res: Response) => {
     try {
-        return res.status(200).json({ message: "Get Newest Count" });
+        const { count }: any = req.params;
+        const querySnapshot = await getDocs(collectionRef);
+        let recipeDocs: any[] = [];
+        querySnapshot.forEach(doc => {
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
+        });
+        recipeDocs = recipeDocs.sort((a: any, b: any) => {
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+        return res.status(200).json({
+            message: "Newest recipes",
+            item: recipeDocs.slice(0, count)
+        });
     } catch (error: any) {
         return res.status(500).json({
             message: "Error",
@@ -230,18 +256,13 @@ export const getPopularRecipes = async (req: Request, res: Response) => {
         const querySnapshot = await getDocs(collectionRef);
         const recipeDocs: any[] = [];
         querySnapshot.forEach(doc => {
-            const recipe = doc.data();
-            if(recipe.score){
-                recipe.score = 0;
-            } else {
-                recipe.score = recipe.score?.reduce((acc: Score, curr: Score) => {acc.score + curr.score});
-            }
-            recipeDocs.push(recipe);
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
         });
         recipeDocs.sort((a: any, b: any) => {
             return b.score - a.score;
         });
-        return res.status(200).json({ message: "Popular", item: recipeDocs });
+        return res.status(200).json({ message: "Most Popular", item: recipeDocs });
     } catch (error: any) {
         return res.status(500).json({
             message: "Error",
@@ -254,25 +275,15 @@ export const getPopularRecipesCount = async (req: Request, res: Response) => {
     try {
         const { count }: any = req.params;
         const querySnapshot = await getDocs(collectionRef);
-        const recipeDocs: any[] = [];
+        let recipeDocs: any[] = [];
         querySnapshot.forEach(doc => {
-            const recipe = doc.data();
-            recipe.score = recipe.score?.reduce((acc: Score, curr: Score) => acc.score + curr.score);
-            recipeDocs.push(recipe);
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
         });
-        recipeDocs.sort((a: any, b: any) => {
+        recipeDocs = recipeDocs.sort((a: any, b: any) => {
             return b.score - a.score;
         });
-        const data: any[] = [];
-        let index = 0;
-        recipeDocs.forEach((doc) => {
-            if (index > count - 1) {
-                return;
-            }
-            data.push(doc);
-            index++;
-        });
-        return res.status(200).json({ message: "Popular", item: data });
+        return res.status(200).json({ message: `${count} most popular`, item: recipeDocs.slice(0, count) });
     } catch (error: any) {
         return res.status(500).json({
             message: "Error",
@@ -287,15 +298,17 @@ export const getPopularRecipesByCategory = async (req: Request, res: Response) =
         const querySnapshot = await getDocs(collectionRef);
         let recipeDocs: any[] = [];
         querySnapshot.forEach(doc => {
-            const recipe = doc.data();
-            recipe.score = recipe.score?.reduce((acc: Score, curr: Score) => acc.score + curr.score);
-            recipeDocs.push(recipe);
+            const data = recipeConverter.fromJSON(doc.data());
+            recipeDocs.push(recipeConverter.toJSON(data));
         });
         recipeDocs.sort((a: any, b: any) => {
             return b.score - a.score;
         });
         recipeDocs = recipeDocs.filter((doc: any) => doc.category === category);
-        return res.status(200).json({ message: "Popular", item: recipeDocs });
+        return res.status(200).json({
+            message: `Most popular by ${category}`,
+            item: recipeDocs
+        });
     } catch (error: any) {
         return res.status(500).json({
             message: "Error",
