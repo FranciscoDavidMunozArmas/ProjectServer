@@ -15,7 +15,6 @@ router.route("/recipe/:id")
 .put(authUser, multerRecipe.single("recipeImage"), RecipeController.putRecipeByID)
 .delete(authUser, RecipeController.deleteRecipeByID);
 
-
 router.route("/score/:id")
 .post(authUser, RecipeController.postScoreByID)
 .delete(authUser, RecipeController.deleteScoreByID);
