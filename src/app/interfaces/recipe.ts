@@ -43,22 +43,6 @@ class Recipe {
 }
 
 export const recipeConverter = {
-    toFirestore: function(recipe: Recipe) {
-        return {
-            title: recipe.title,
-            image: recipe.image,
-            category: recipe.category,
-            time: recipe.time,
-            plates: recipe.plates,
-            ingredients: recipe.ingredients,
-            steps: recipe.steps,
-            author: recipe.author,
-            calories: recipe.calories,
-            scores: recipe.scores,
-            description: recipe.description,
-            id: recipe.id,
-        };
-    },
     toJSON(recipe: Recipe): any {
         return {
             title: recipe.title,

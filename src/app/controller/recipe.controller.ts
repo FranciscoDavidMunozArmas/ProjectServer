@@ -3,6 +3,8 @@ import { database } from '../../config/firestore.config';
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { recipeConverter } from '../interfaces/recipe';
 import { Score } from '../interfaces/score';
+import { commentaryConverter } from '../interfaces/commentary';
+import { v4 } from 'uuid';
 
 const collectionRef = collection(database, 'recipes');
 
@@ -35,9 +37,9 @@ export const postRecipe = async (req: Request | any, res: Response) => {
         const recipe = recipeConverter.fromJSON(req.body);
         recipe.author = req.payload;
         recipe.date = (new Date()).toISOString();
-        const docRef = await addDoc(collectionRef, recipeConverter.toFirestore(recipe));
+        const docRef = await addDoc(collectionRef, recipeConverter.toJSON(recipe));
         recipe.id = docRef.id;
-        await updateDoc(documentRef(docRef.id), recipeConverter.toFirestore(recipe));
+        await updateDoc(documentRef(docRef.id), recipeConverter.toJSON(recipe));
         return res.status(200).json({
             message: "Recipe created",
             id: docRef.id
@@ -93,7 +95,7 @@ export const putRecipeByID = async (req: Request | any, res: Response) => {
         const recipe = recipeConverter.fromJSON(req.body);
         recipe.id = id;
         recipe.author = req.payload;
-        await setDoc(documentRef(id), recipeConverter.toFirestore(recipe));
+        await setDoc(documentRef(id), recipeConverter.toJSON(recipe));
         return res.status(200).json({
             message: "Recipe updated",
             item: id
@@ -122,6 +124,83 @@ export const deleteRecipeByID = async (req: Request, res: Response) => {
     }
 }
 
+export const postCommentary = async (req: Request | any, res: Response) => {
+    try {
+        const { recipeID } = req.params;
+        const recipeDoc = await getDoc(documentRef(recipeID));
+        const recipe = recipeConverter.fromJSON(recipeDoc.data());
+        const commentary = commentaryConverter.toJSON(req.body);
+        commentary.id = v4();
+        commentary.authorID = req.payload;
+        commentary.date = (new Date()).toString();
+        if (!recipe.commentaries) {
+            recipe.commentaries = [];
+        } else {
+            recipe.commentaries.push(commentary);
+        }
+        await updateDoc(documentRef(recipeID), recipeConverter.toJSON(recipe));
+        return res.status(200).json({
+            message: "Commentary posted",
+            item: recipeConverter.toJSON(recipe)
+        });
+    } catch (error: any) {
+        return res.status(500).json({
+            message: "Error",
+            error: error.message
+        });
+    }
+}
+
+export const putCommentary = async (req: Request | any, res: Response) => {
+    try {
+        const { recipeID, commentaryID } = req.params;
+        const recipeDoc = await getDoc(documentRef(recipeID));
+        const recipe = recipeConverter.fromJSON(recipeDoc.data());
+        const commentary = commentaryConverter.toJSON(req.body);
+        commentary.id = commentaryID;
+
+        if (recipe.commentaries) {
+            const index = recipe.commentaries.findIndex(commentary => commentary.id === commentaryID);
+            if (index !== -1) {
+                commentary.date = recipe.commentaries[index].date;
+                commentary.authorID = recipe.commentaries[index].authorID;
+                recipe.commentaries[index] = commentary;
+            }
+        }
+        await updateDoc(documentRef(recipeID), recipeConverter.toJSON(recipe));
+        return res.status(200).json({
+            message: "Commentary updated",
+            item: recipeConverter.toJSON(recipe)
+        });
+    } catch (error: any) {
+        return res.status(500).json({
+            message: "Error",
+            error: error.message
+        });
+    }
+}
+
+export const deleteCommentary = async (req: Request, res: Response) => {
+    try {
+        const { recipeID, commentaryID } = req.params;
+        const recipeDoc = await getDoc(documentRef(recipeID));
+        const recipe = recipeConverter.fromJSON(recipeDoc.data());
+        if (recipe.commentaries) {
+            const newCommentaries = recipe.commentaries.filter(commentary => commentary.id !== commentaryID);
+            recipe.commentaries = newCommentaries;
+        }
+        await updateDoc(documentRef(recipeID), recipeConverter.toJSON(recipe));
+        return res.status(200).json({
+            message: "Commentary deleted"
+        });
+    } catch (error: any) {
+        return res.status(500).json({
+            message: "Error",
+            error: error.message
+        });
+    }
+}
+
 export const postScoreByID = async (req: Request | any, res: Response) => {
     try {
         const { id } = req.params;
@@ -135,8 +214,8 @@ export const postScoreByID = async (req: Request | any, res: Response) => {
         } else {
             oldData.scores = [score];
         }
-        
-        await updateDoc(recipeRef, recipeConverter.toFirestore(oldData));
+
+        await updateDoc(recipeRef, recipeConverter.toJSON(oldData));
         return res.status(200).json({ message: "Recipe scored" });
     } catch (error: any) {
         return res.status(500).json({
@@ -155,7 +234,7 @@ export const deleteScoreByID = async (req: Request | any, res: Response) => {
         if (oldData.scores) {
             oldData.scores = oldData.scores.filter((item: Score) => item.author !== req.payload);
         }
-        await updateDoc(recipeRef, recipeConverter.toFirestore(oldData));
+        await updateDoc(recipeRef, recipeConverter.toJSON(oldData));
         return res.status(200).json({ message: "Scored deleted" });
     } catch (error: any) {
         return res.status(500).json({

@@ -15,6 +15,13 @@ router.route("/recipe/:id")
 .put(authUser, multerRecipe.single("recipeImage"), RecipeController.putRecipeByID)
 .delete(authUser, RecipeController.deleteRecipeByID);
 
+router.route("/commentaries/:recipeID")
+.post(authUser, RecipeController.postCommentary);
+
+router.route("/commentaries/:recipeID/:commentaryID")
+.put(authUser, RecipeController.putCommentary)
+.delete(authUser, RecipeController.deleteCommentary);
+
 router.route("/score/:id")
 .post(authUser, RecipeController.postScoreByID)
 .delete(authUser, RecipeController.deleteScoreByID);
@@ -39,7 +46,6 @@ router.route("/popular/count/:count")
 
 router.route("/popular/category/:category")
 .get(authUser, RecipeController.getPopularRecipesByCategory);
-
 
 
 export default router;
