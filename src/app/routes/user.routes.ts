@@ -9,7 +9,7 @@ router.route("/authorize")
 
 router.route("/")
 .get(authUser, UserController.getUsers)
-.post(authUser, UserController.postUser)
+.post(UserController.postUser)
 .delete(authUser, UserController.deleteUsers);
 
 router.route("/user/:id")

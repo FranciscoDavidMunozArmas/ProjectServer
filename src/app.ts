@@ -5,6 +5,7 @@ import cors from 'cors';
 import config from './lib/utils';
 
 import userRouter from './app/routes/user.routes';
+import recipesRouter from './app/routes/recipe.routes';
 
 
 const app = express();
@@ -20,5 +21,6 @@ app.use(express.json());
 
 //routes
 app.use("/users", userRouter);
+app.use("/recipes", recipesRouter);
 
 export default app;
