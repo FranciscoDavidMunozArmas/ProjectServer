@@ -3,7 +3,7 @@ import { addDoc, collection, deleteDoc, doc, FieldValue, getDoc, getDocs, query,
 import 'firebase/firestore';
 import { app, database } from '../../config/firestore.config';
 import { tokenize } from '../../lib/token';
-import { User } from '../interfaces/user';
+import { userConverter } from '../interfaces/user';
 
 const collectionRef = () => {
     return collection(database, 'users');
@@ -45,8 +45,8 @@ export const getUsers = async (req: Request, res: Response) => {
 
 export const postUser = async (req: Request, res: Response) => {
     try {
-        const user: User = req.body;
-        const docRef = await addDoc(collectionRef(), user);
+        const user = userConverter.fromJSON(req.body);
+        const docRef = await addDoc(collectionRef(), userConverter.toJSON(user));
         return res.status(200).json({
             message: "User created",
             id: docRef.id
@@ -117,13 +117,14 @@ export const putSave = async (req: Request | any, res: Response) => {
     try {
         const { payload } = req;
         const { recipe } = req.body;
-        const oldData: User | any = (await getDoc(documentRef(payload))).data();
-        if (oldData.saves) {
-            oldData.saves.push(recipe);
+        const data: any = (await getDoc(documentRef(payload))).data();
+        if (data.saves) {
+            data.saves.push(recipe);
         } else {
-            oldData.saves = [recipe];
+            data.saves = [recipe];
         }
-        await updateDoc(documentRef(payload), oldData);
+        const newData = userConverter.fromJSON(data);
+        await updateDoc(documentRef(payload), userConverter.toJSON(newData));
         return res.status(200).json({
             message: "Saved recipe",
             item: recipe
@@ -140,11 +141,58 @@ export const deleteSave = async (req: Request | any, res: Response) => {
     try {
         const { payload } = req;
         const { recipe } = req.body;
-        const oldData: User | any = (await getDoc(documentRef(payload))).data();
-        if (oldData.saves) {
-            oldData.saves = oldData.saves.filter((item: string) => item !== recipe);
+        const data: any = (await getDoc(documentRef(payload))).data();
+        if (data.saves) {
+            data.saves = data.saves.filter((item: string) => item !== recipe);
         }
-        await updateDoc(documentRef(payload), oldData);
+        const newData = userConverter.fromJSON(data);
+        await updateDoc(documentRef(payload), userConverter.toJSON(newData));
+        return res.status(200).json({
+            message: "Saved recipe deleted",
+            item: recipe
+        });
+    } catch (error: any) {
+        return res.status(500).json({
+            message: "Error",
+            error: error.message
+        });
+    }
+}
+
+export const putCreate = async (req: Request | any, res: Response) => {
+    try {
+        const { payload } = req;
+        const { recipe } = req.body;
+        const data: any = (await getDoc(documentRef(payload))).data();
+        if (data.created) {
+            data.created.push(recipe);
+        } else {
+            data.created = [recipe];
+        }
+        const newData = userConverter.fromJSON(data);
+        await updateDoc(documentRef(payload), userConverter.toJSON(newData));
+        return res.status(200).json({
+            message: "Saved recipe",
+            item: recipe
+        });
+    } catch (error: any) {
+        return res.status(500).json({
+            message: "Error",
+            error: error.message
+        });
+    }
+}
+
+export const deleteCreate = async (req: Request | any, res: Response) => {
+    try {
+        const { payload } = req;
+        const { recipe } = req.body;
+        const data: any = (await getDoc(documentRef(payload))).data();
+        if (data.created) {
+            data.created = data.saves.filter((item: string) => item !== recipe);
+        }
+        const newData = userConverter.fromJSON(data);
+        await updateDoc(documentRef(payload), userConverter.toJSON(newData));
         return res.status(200).json({
             message: "Saved recipe deleted",
             item: recipe

@@ -20,4 +20,8 @@ router.route("/saves/")
 .put(authUser, UserController.putSave)
 .delete(authUser, UserController.deleteSave);
 
+router.route("/creates/")
+.put(authUser, UserController.putCreate)
+.delete(authUser, UserController.deleteCreate);
+
 export default router;
